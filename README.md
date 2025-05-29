@@ -3,131 +3,201 @@
 
 ## 🔍 Что это такое?
 
-Готовое устройство на базе **ESP32-H2**, подключённое к импульсному датчику воды. Передаёт данные в **Home Assistant** по протоколу **Zigbee** и используется для контроля количества израсходованной питьевой воды (например, из фильтра обратного осмоса).
+Прошивка превращает **ESP32-H2** в Zigbee-счётчик воды, подключаемый к импульсному датчику (например, от фильтра обратного осмоса). Устройство передаёт данные в **Home Assistant** через **Zigbee2MQTT** или **ZHA** и помогает отслеживать расход воды.
 
 📌 Основные цели:
-- Учёт объёма выпитой/отфильтрованной воды
-- Напоминание о необходимости замены фильтров
-- Интеграция с Яндекс Алисой, Telegram и другими помощниками
+- Учёт объёма фильтрованной воды
+- Отслеживание потока в реальном времени
+- Уведомления и напоминания в Home Assistant
 
 ## ⚙️ Возможности
 
-- Поддержка Zigbee (через `esp-zigbee-sdk`)
-- Подсчёт воды: 1 импульс = 1 литр (можно изменить)
-- Zigbee кластеры:
-  - `Metering` — объём воды
-  - `OnOff` — сброс счётчика через Home Assistant
-- Хранение текущего значения в энергонезависимой памяти (NVS)
-- Поддержка Zigbee2MQTT и ZHA
+- Поддержка **Zigbee** (через `esp-zigbee-sdk`)
+- Расчёт:
+  - **Общий расход (`energy`)** — литры
+  - **Мгновенный расход (`power`)** — литры в секунду
+- Поддержка Zigbee кластеров:
+  - `Metering` (`currentSummDelivered`) – общий расход
+  - `instantaneousDemand` – мгновенный расход
+- Энергонезависимое хранение данных в NVS
+- Совместимость с **Zigbee2MQTT** и **ZHA**
 
-## 📥 Скачать прошивку
+## 📥 Прошивка
 
-Три файла для прошивки:
-- `bootloader.bin` – 📎 Скачать
-- `partition-table.bin` – 📎 Скачать
-- `zb_water_meter.bin` – 📎 Скачать
+Скачайте три файла:
+
+- `bootloader.bin` — 📎 [Скачать](#)
+- `partition-table.bin` — 📎 [Скачать](#)
+- `zb_water_meter.bin` — 📎 [Скачать](#)
 
 ## 🪟 Как прошить (Windows)
 
-1. Установи [Flash Download Tool от Espressif](https://www.espressif.com/en/support/download/other-tools)
-2. Подключи ESP32-H2 к компьютеру по USB
-3. Запусти `flash_download_tool`, выбери чип `ESP32-H2`
-4. Укажи:
-   - `bootloader.bin` → **адрес 0x0**
-   - `partition-table.bin` → **адрес 0x8000**
-   - `zb_water_meter.bin` → **адрес 0x10000**
-5. Укажи COM-порт, нажми **Start**
-6. Дождись окончания и перезагрузи плату
+1. Установите [ESP32 Flash Download Tool](https://www.espressif.com/en/support/download/other-tools)
+2. Подключите ESP32-H2 к компьютеру
+3. В `flash_download_tool.exe` выберите:
+   - ChipType: `ESP32-H2`
+   - WorkMode: `Develop`
+   - LoadMode: `UART`
+4. Укажите файлы и адреса:
+   - `bootloader.bin` → `0x0000`
+   - `partition-table.bin` → `0x8000`
+   - `zb_water_meter.bin` → `0x10000`
+5. Выберите COM-порт, нажмите **START**
+6. После окончания перезагрузите устройство
 
-## 🐧 Как прошить (Linux / Mac)
+## 🧩 Интеграция в Zigbee2MQTT (с внешним converter'ом)
 
-1. Установи `esptool`:
+Чтобы устройство работало корректно, требуется добавить кастомный external converter:
+
+### 🔧 1. Создайте файл `water.js`
+
 ```bash
-pip install esptool
-```
-2. Найди порт устройства:
-```bash
-ls /dev/ttyUSB*
-```
-3. Запусти прошивку:
-```bash
-esptool.py --chip esp32h2 --port /dev/ttyUSB0 --baud 460800 write_flash -z \
-  0x0 bootloader.bin \
-  0x8000 partition-table.bin \
-  0x10000 zb_water_meter.bin
+cd /homeassistant/zigbee2mqtt
+mkdir -p external_converters
+nano external_converters/water.js
 ```
 
-## 🏠 Интеграция в Home Assistant
+Вставьте содержимое:
 
-1. Добавь устройство в Zigbee-сеть (ZHA или Zigbee2MQTT)
-2. В интерфейсе появятся:
-   - Сенсор объёма воды (литры)
-   - Переключатель сброса счётчика
-3. Настрой автоматизации:
-   - Уведомления об объёме (через Telegram, Алису)
-   - Напоминание о замене фильтра через заданное количество литров
+```js
+const fz = require('zigbee-herdsman-converters/converters/fromZigbee');
+const exposes = require('zigbee-herdsman-converters/lib/exposes');
+const e = exposes.presets;
+const ea = exposes.access;
 
----
-
-# 💧 Smart Zigbee Water Meter for Home Assistant (ESP32-H2)
-
-## 🔍 What is it?
-
-This firmware turns your **ESP32-H2** board into a **Zigbee-based water flow counter**, designed to monitor **filtered water** consumption (e.g., reverse osmosis). It integrates with **Home Assistant** to help you track how much water you consume and when to change your filters.
-
-## ⚙️ Features
-
-- Zigbee support via `esp-zigbee-sdk`
-- 1 pulse = 1 liter (can be configured)
-- Zigbee clusters:
-  - `Metering` – water volume (liters)
-  - `OnOff` – reset the counter from HA
-- Non-volatile storage of current value
-- Works with Zigbee2MQTT or ZHA
-
-## 📥 Firmware Files
-
-Three `.bin` files required:
-- `bootloader.bin` – 📎 Download
-- `partition-table.bin` – 📎 Download
-- `zb_water_meter.bin` – 📎 Download
-
-## 🪟 Flashing on Windows
-
-1. Download [Flash Download Tool from Espressif](https://www.espressif.com/en/support/download/other-tools)
-2. Connect ESP32-H2 to your PC
-3. Launch the tool and select `ESP32-H2`
-4. Add:
-   - `bootloader.bin` → **@ 0x0**
-   - `partition-table.bin` → **@ 0x8000**
-   - `zb_water_meter.bin` → **@ 0x10000**
-5. Set COM port and press **Start**
-6. Reboot the device when done
-
-## 🐧 Flashing on Linux / Mac
-
-1. Install `esptool`:
-```bash
-pip install esptool
-```
-2. Find device port:
-```bash
-ls /dev/ttyUSB*
-```
-3. Flash:
-```bash
-esptool.py --chip esp32h2 --port /dev/ttyUSB0 --baud 460800 write_flash -z \
-  0x0 bootloader.bin \
-  0x8000 partition-table.bin \
-  0x10000 zb_water_meter.bin
+module.exports = [
+    {
+        fingerprint: [{modelID: 'WaterMeter', manufacturerName: 'Espressif'}],
+        model: 'WaterMeter',
+        vendor: 'Espressif',
+        description: 'Zigbee Water Meter with Metering cluster',
+        fromZigbee: [fz.metering],
+        toZigbee: [],
+        exposes: [
+            e.numeric('energy', ea.STATE).withUnit('L').withDescription('Общий расход воды'),
+            e.numeric('power', ea.STATE).withUnit('L/s').withDescription('Мгновенный расход воды'),
+        ],
+        configure: async (device, coordinatorEndpoint, logger) => {
+            const endpoint = device.getEndpoint(1);
+            device.endpoints[0].readRequest = async () => {
+                try {
+                    await endpoint.read('seMetering', ['currentSummDelivered']);
+                } catch (e) {
+                    // ignore read error
+                }
+            };
+            setInterval(async () => {
+                if (device.endpoints[0].readRequest) {
+                    await device.endpoints[0].readRequest();
+                }
+            }, 60000);
+        },
+    },
+];
 ```
 
-## 🏠 Home Assistant Integration
+### 🔧 2. Подключите converter в `configuration.yaml`
 
-1. Pair the device via Zigbee2MQTT or ZHA
-2. You'll see:
-   - Water volume sensor (liters)
-   - Reset switch
-3. Setup automations:
-   - Alerts for water consumption
-   - Filter replacement reminder
+```yaml
+external_converters:
+  - water.js
+
+devices:
+  '0x1234567890abcdef':
+    friendly_name: water_meter
+    reporting:
+      exclude:
+        - currentSummDelivered
+        - multiplier
+        - divisor
+```
+
+### 🔃 3. Перезапустите Zigbee2MQTT
+
+```bash
+docker restart addon_core_zigbee2mqtt
+```
+
+## 🏠 Как это выглядит в Home Assistant
+
+После успешной интеграции появятся:
+
+| Название     | Тип     | Единицы | Описание                |
+|--------------|----------|---------|-------------------------|
+| `energy`     | sensor   | L       | Общий расход воды       |
+| `power`      | sensor   | L/s     | Мгновенный поток воды   |
+| `linkquality`| sensor   | lqi     | Качество сигнала Zigbee |
+
+## ⚙️ Примеры автоматизаций
+
+- Уведомление в Telegram при расходе 100 литров
+- Оповещение об утечке (если `power > 1.0`)
+- Напоминание о замене фильтра через 300 литров
+
+## 🧠 Custom External Converter for Zigbee2MQTT
+
+To enable support for this device in Zigbee2MQTT, a **custom external converter** is required. This allows Zigbee2MQTT to read only the required `currentSummDelivered` attribute from the Metering cluster.
+
+### 🔧 How to set it up:
+
+1. SSH into your Home Assistant machine or access the terminal.
+2. Navigate to the Zigbee2MQTT config directory:
+```bash
+cd /homeassistant/zigbee2mqtt
+```
+3. Create a folder for external converters:
+```bash
+mkdir external_converters
+```
+4. Create a new file:
+```bash
+nano external_converters/water.js
+```
+5. Paste the following code into `water.js`:
+
+```js
+const fz = require('zigbee-herdsman-converters/converters/fromZigbee');
+const exposes = require('zigbee-herdsman-converters/lib/exposes');
+const e = exposes.presets;
+const ea = exposes.access;
+
+module.exports = [
+    {
+        fingerprint: [{modelID: 'WaterMeter', manufacturerName: 'Espressif'}],
+        model: 'WaterMeter',
+        vendor: 'Espressif',
+        description: 'Zigbee Water Meter with Metering cluster',
+        fromZigbee: [fz.metering],
+        toZigbee: [],
+        exposes: [
+            e.numeric('energy', ea.STATE).withUnit('L').withDescription('Total water usage'),
+            e.numeric('power', ea.STATE).withUnit('L/s').withDescription('Instant water flow'),
+        ],
+        configure: async (device, coordinatorEndpoint) => {
+            const endpoint = device.getEndpoint(1);
+            device.endpoints[0].readRequest = async () => {
+                try {
+                    await endpoint.read('seMetering', ['currentSummDelivered']);
+                } catch (e) {
+                    // ignore read error
+                }
+            };
+            setInterval(async () => {
+                if (device.endpoints[0].readRequest) {
+                    await device.endpoints[0].readRequest();
+                }
+            }, 60000);
+        },
+    },
+];
+```
+
+6. Save the file and edit your Zigbee2MQTT `configuration.yaml`:
+```yaml
+external_converters:
+  - external_converters/water.js
+```
+
+7. Restart Zigbee2MQTT.
+
+The water meter will now report the total water usage to Zigbee2MQTT automatically every 60 seconds.
