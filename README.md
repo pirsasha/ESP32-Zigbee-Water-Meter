@@ -35,15 +35,20 @@
 1. Установите [ESP32 Flash Download Tool](https://www.espressif.com/en/support/download/other-tools)
 2. Подключите ESP32-H2 к компьютеру
 3. В `flash_download_tool.exe` выберите:
+  <p align="left">
+  <img src="doc/image/flash.png" alt="Настройка загрузчика" width="200" style="float:left; margin-right: 20px;">
+  </p>
+  
    - ChipType: `ESP32-H2`
    - WorkMode: `Develop`
    - LoadMode: `UART`
-4. Укажите файлы и адреса:
+     
+5. Укажите файлы и адреса:
    - `bootloader.bin` → `0x0000`
    - `partition-table.bin` → `0x8000`
    - `zb_water_meter.bin` → `0x10000`
-5. Выберите COM-порт, нажмите **START**
-6. После окончания перезагрузите устройство
+6. Выберите COM-порт, нажмите **START**
+7. После окончания перезагрузите устройство
 
 ## 🧩 Интеграция в Zigbee2MQTT (с внешним converter'ом)
 
