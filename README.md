@@ -26,9 +26,9 @@
 
 Скачайте три файла:
 
-- `bootloader.bin` — 📎 [Скачать](#)
-- `partition-table.bin` — 📎 [Скачать](#)
-- `zb_water_meter.bin` — 📎 [Скачать](#)
+- [bootloader.bin](firmware_esp32h2/bootloader.bin)
+- [partition-table.bin](firmware_esp32h2/partition-table.bin)
+- [zb_water_meter.bin](firmware_esp32h2/zb_water_meter.bin)
 
 ## 🪟 Как прошить (Windows)
 
